@@ -1,0 +1,97 @@
+if TESTHUBV2_LOADED and not _G.TESTHUBV2_DEBUG == true then
+    print("TestHubV2 is already running!", 0)
+    return
+end
+pcall(function() getgenv().TESTHUBV2_LOADED = true end)
+local loadgame = game
+repeat task.wait() until loadgame:IsLoaded() and game.Players.LocalPlayer
+
+local function checkraid() return game.PlaceId == 18859789310 end
+local function checksea2() return game.PlaceId == 7258239416 end
+local function checksea1() return game.PlaceId == 4587545091 end
+local function sea(value)
+    return (value == 3 and game.PlaceId == 15759515082) or
+           (value == 1 and game.PlaceId == 4520749081) or
+           (value == 2 and game.PlaceId == 6381829480) or
+           (value == 4 and game.PlaceId == 5931540094)
+end
+
+local HttpService = game:GetService("HttpService")
+local MarketplaceService = game:GetService("MarketplaceService")
+local Players = game:GetService("Players")
+
+local httprequest = (syn and syn.request) or (http and http.request) or http_request or (fluxus and fluxus.request) or request
+if not httprequest then
+    warn("Executor không hỗ trợ HTTP!")
+    game.Players.LocalPlayer:Kick("Executer Không Hỗ Trợ Script")
+    return
+end
+
+local gameTitle
+local success, result = pcall(function()
+    return MarketplaceService:GetProductInfo(game.PlaceId).Name
+end)
+if success then
+    gameTitle = result
+else
+    gameTitle = tostring(game.PlaceId)
+    warn("Không thể lấy tên game: " .. tostring(result))
+end
+
+local function checkForUpdatesAndLoadOnce(url)
+    local lastCode = ""
+    local hasLoaded = false
+    task.spawn(function()
+        while true do
+            local success, newCode = pcall(function()
+                return game:HttpGet(url .. "?t=" .. os.time(), true)
+            end)
+           
+            if success then
+                if newCode ~= lastCode and not hasLoaded then
+                    lastCode = newCode
+                    local func, err = loadstring(newCode)
+                    if func then
+                        local runSuccess, result = pcall(func)
+                        if runSuccess then
+                            hasLoaded = true
+                        else
+                            warn("Lỗi khi chạy mã: " .. tostring(result))
+                        end
+                    else
+                        warn("Lỗi cú pháp: " .. tostring(err))
+                    end
+                elseif newCode == lastCode then
+                    hasLoaded = false
+                end
+            else
+                warn("Lỗi tải dữ liệu: " .. tostring(newCode))
+            end
+            task.wait(5)
+        end
+    end)
+end
+
+-- Load script theo game
+if checksea1() or checksea2() or checkraid() then
+    print("vnp")
+elseif sea(1) or sea(2) or sea(3) or sea(4) then
+    -- King Legacy (fake)
+    checkForUpdatesAndLoadOnce("https://gist.githubusercontent.com/zxcv-5/76aebea4d5880f7d770ea71245cadc25/raw")
+elseif game.PlaceId == 18192562963 then
+    print("cdvn")
+else
+    print("uni")
+end
+
+-- Queue on teleport để script chạy lại khi rejoin server khác
+local TeleportCheck = false
+local queue_on_teleport = (syn and syn.queue_on_teleport) or queue_on_teleport or (fluxus and fluxus.queue_on_teleport)
+game:GetService("Players").LocalPlayer.OnTeleport:Connect(function(State)
+    if not TeleportCheck and queue_on_teleport then
+        TeleportCheck = true
+        queue_on_teleport([[
+            loadstring(game:HttpGet("https://gist.github.com/zxcv-5/284a01ef6f74a841793382f81353b8e4/raw?t="..os.time(),true))()
+        ]])
+    end
+end)
