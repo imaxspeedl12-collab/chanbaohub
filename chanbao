@@ -17,50 +17,51 @@ local function sea(value)
            (value == 4 and game.PlaceId == 5931540094)
 end
 
-local hwid = game:GetService("RbxAnalyticsService"):GetClientId() or "Không Thể Lấy HWID"
-local HttpService = game:GetService("HttpService")
-local MarketplaceService = game:GetService("MarketplaceService")
-local Players = game:GetService("Players")
-
--- WEBHOOK DISCORD CỦA MÀY
-local MY_WEBHOOK_URL = "https://discordapp.com/api/webhooks/1453779349538078841/avZP49_Cv7elihUury1riXXtTlzH9QXh6gfiq_uxNsZ-Vj-6F2Ach6APrzGRNsQWsmQD"
-
 local httprequest = (syn and syn.request) or (http and http.request) or http_request or (fluxus and fluxus.request) or request
 if not httprequest then
     warn("Executor không hỗ trợ HTTP!")
-    game.Players.LocalPlayer:Kick("Executor Không Hỗ Trợ HTTP")
+    game.Players.LocalPlayer:Kick("Executer Không Hỗ Trợ Script")
     return
 end
 
-local gameTitle
-local success, result = pcall(function()
-    return MarketplaceService:GetProductInfo(game.PlaceId).Name
-end)
-if success then
-    gameTitle = result
+local function checkForUpdatesAndLoadOnce(url)
+    local lastCode = ""
+    local hasLoaded = false
+    task.spawn(function()
+        while true do
+            local success, newCode = pcall(function()
+                return game:HttpGet(url .. "?t=" .. os.time(), true)
+            end)
+            if success and newCode ~= lastCode and not hasLoaded then
+                lastCode = newCode
+                loadstring(newCode)()
+                hasLoaded = true
+            elseif newCode == lastCode then
+                hasLoaded = false
+            end
+            task.wait(5)
+        end
+    end)
+end
+
+-- LINK SOURCE MỚI CỦA MÀY CHO KING LEGACY (SẠCH HOÀN TOÀN, THAY THẾ GIST 1 CŨ)
+local KING_LEGACY_HUB = "https://raw.githubusercontent.com/imaxspeedl12-collab/cbv2/refs/heads/main/SOURCE%20HOP"
+
+-- Load hub theo game
+if checksea1() or checksea2() or checkraid() or sea(1) or sea(2) or sea(3) or sea(4) or game.PlaceId == 18192562963 then
+    checkForUpdatesAndLoadOnce(KING_LEGACY_HUB)
 else
-    gameTitle = tostring(game.PlaceId)
+    print("Game chưa hỗ trợ")
 end
 
-local function getISOTime()
-    return os.date("!%Y-%m-%dT%H:%M:%S.000Z", os.time())
-end
-
--- Hàm gửi log khi có người inject
-local lastSent = 0
-local cooldown = 10
-local function sendLogWebhook()
-    if os.time() - lastSent < cooldown then return end
-    lastSent = os.time()
-
-    local embed = {
-        ["content"] = "",
-        ["embeds"] = {{
-            ["title"] = "🚀 Ai đó vừa inject CHANBAOHUB!",
-            ["description"] = "**Người chơi:** " .. Players.LocalPlayer.DisplayName .. " (@" .. Players.LocalPlayer.Name .. ")",
-            ["color"] = 0x00FFFF,
-            ["fields"] = {
-                { ["name"] = "Game", ["value"] = gameTitle, ["inline"] = true },
-                { ["name"] = "Executor", ["value"] = identifyexecutor() or "Không xác định", ["inline"] = true },
-                { ["name"] = "HWID", ["value"] = "```" .. hwid .. "```", ["inline"] = false },
-                { ["name"] = "Account Age", ["value"] = tostring(Players.LocalPlayer.AccountAge) .. " ngày",
+-- Queue on teleport tự chạy lại source mới của mày
+local TeleportCheck = false
+local queue_on_teleport = (syn and syn.queue_on_teleport) or queue_on_teleport or (fluxus and fluxus.queue_on_teleport)
+game:GetService("Players").LocalPlayer.OnTeleport:Connect(function(State)
+    if not TeleportCheck and queue_on_teleport then
+        TeleportCheck = true
+        queue_on_teleport([[
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/imaxspeedl12-collab/cbv2/refs/heads/main/SOURCE%20HOP?t="..os.time(),true))()
+        ]])
+    end
+end)
