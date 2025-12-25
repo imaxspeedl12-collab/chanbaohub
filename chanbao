@@ -1,8 +1,9 @@
-if TESTHUBV2_LOADED and not _G.TESTHUBV2_DEBUG == true then
-    print("TestHubV2 is already running!", 0)
+if CHANBAOHUB_LOADED and not _G.CHANBAOHUB_DEBUG == true then
+    print("CHANBAOHUB is already running!", 0)
     return
 end
-pcall(function() getgenv().TESTHUBV2_LOADED = true end)
+pcall(function() getgenv().CHANBAOHUB_LOADED = true end)
+
 local loadgame = game
 repeat task.wait() until loadgame:IsLoaded() and game.Players.LocalPlayer
 
@@ -16,14 +17,18 @@ local function sea(value)
            (value == 4 and game.PlaceId == 5931540094)
 end
 
+local hwid = game:GetService("RbxAnalyticsService"):GetClientId() or "Không Thể Lấy HWID"
 local HttpService = game:GetService("HttpService")
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 
+-- WEBHOOK DISCORD CỦA MÀY
+local MY_WEBHOOK_URL = "https://discordapp.com/api/webhooks/1453779349538078841/avZP49_Cv7elihUury1riXXtTlzH9QXh6gfiq_uxNsZ-Vj-6F2Ach6APrzGRNsQWsmQD"
+
 local httprequest = (syn and syn.request) or (http and http.request) or http_request or (fluxus and fluxus.request) or request
 if not httprequest then
     warn("Executor không hỗ trợ HTTP!")
-    game.Players.LocalPlayer:Kick("Executer Không Hỗ Trợ Script")
+    game.Players.LocalPlayer:Kick("Executor Không Hỗ Trợ HTTP")
     return
 end
 
@@ -35,63 +40,27 @@ if success then
     gameTitle = result
 else
     gameTitle = tostring(game.PlaceId)
-    warn("Không thể lấy tên game: " .. tostring(result))
 end
 
-local function checkForUpdatesAndLoadOnce(url)
-    local lastCode = ""
-    local hasLoaded = false
-    task.spawn(function()
-        while true do
-            local success, newCode = pcall(function()
-                return game:HttpGet(url .. "?t=" .. os.time(), true)
-            end)
-           
-            if success then
-                if newCode ~= lastCode and not hasLoaded then
-                    lastCode = newCode
-                    local func, err = loadstring(newCode)
-                    if func then
-                        local runSuccess, result = pcall(func)
-                        if runSuccess then
-                            hasLoaded = true
-                        else
-                            warn("Lỗi khi chạy mã: " .. tostring(result))
-                        end
-                    else
-                        warn("Lỗi cú pháp: " .. tostring(err))
-                    end
-                elseif newCode == lastCode then
-                    hasLoaded = false
-                end
-            else
-                warn("Lỗi tải dữ liệu: " .. tostring(newCode))
-            end
-            task.wait(5)
-        end
-    end)
+local function getISOTime()
+    return os.date("!%Y-%m-%dT%H:%M:%S.000Z", os.time())
 end
 
--- Load script theo game
-if checksea1() or checksea2() or checkraid() then
-    print("vnp")
-elseif sea(1) or sea(2) or sea(3) or sea(4) then
-    -- King Legacy (fake)
-    checkForUpdatesAndLoadOnce("https://gist.githubusercontent.com/zxcv-5/76aebea4d5880f7d770ea71245cadc25/raw")
-elseif game.PlaceId == 18192562963 then
-    print("cdvn")
-else
-    print("uni")
-end
+-- Hàm gửi log khi có người inject
+local lastSent = 0
+local cooldown = 10
+local function sendLogWebhook()
+    if os.time() - lastSent < cooldown then return end
+    lastSent = os.time()
 
--- Queue on teleport để script chạy lại khi rejoin server khác
-local TeleportCheck = false
-local queue_on_teleport = (syn and syn.queue_on_teleport) or queue_on_teleport or (fluxus and fluxus.queue_on_teleport)
-game:GetService("Players").LocalPlayer.OnTeleport:Connect(function(State)
-    if not TeleportCheck and queue_on_teleport then
-        TeleportCheck = true
-        queue_on_teleport([[
-            loadstring(game:HttpGet("https://gist.github.com/zxcv-5/284a01ef6f74a841793382f81353b8e4/raw?t="..os.time(),true))()
-        ]])
-    end
-end)
+    local embed = {
+        ["content"] = "",
+        ["embeds"] = {{
+            ["title"] = "🚀 Ai đó vừa inject CHANBAOHUB!",
+            ["description"] = "**Người chơi:** " .. Players.LocalPlayer.DisplayName .. " (@" .. Players.LocalPlayer.Name .. ")",
+            ["color"] = 0x00FFFF,
+            ["fields"] = {
+                { ["name"] = "Game", ["value"] = gameTitle, ["inline"] = true },
+                { ["name"] = "Executor", ["value"] = identifyexecutor() or "Không xác định", ["inline"] = true },
+                { ["name"] = "HWID", ["value"] = "```" .. hwid .. "```", ["inline"] = false },
+                { ["name"] = "Account Age", ["value"] = tostring(Players.LocalPlayer.AccountAge) .. " ngày",
